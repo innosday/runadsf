@@ -141,6 +141,8 @@ while running:
         print("fsd")
         # pygame.display.flip()
         # pygame.time.delay(60000)
+        # running = False
+        # pygame.quit()
         
 
     dt = clock.tick(60) / 1000
