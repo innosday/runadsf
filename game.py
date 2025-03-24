@@ -3,6 +3,44 @@ from pygame import locals
 from math import sqrt
 import random
 
+# Particle class
+class Particle:
+    def __init__(self, x, y, color):
+        self.x = x
+        self.y = y
+        self.dx = random.uniform(-2, 2)
+        self.dy = random.uniform(-2, 2)
+        self.lifetime = 30
+        self.color = color
+
+    def update(self):
+        self.x += self.dx
+        self.y += self.dy
+        self.lifetime -= 1
+
+    def draw(self, window):
+        position = (int(self.x), int(self.y))
+        pygame.draw.circle(window, self.color, position, 3)
+
+# Particle system class
+class ParticleSystem:
+    def __init__(self):
+        self.particles = []
+
+    def add_particle(self, x, y, color):
+        self.particles.append(Particle(x, y,color))
+
+    def update(self):
+        for particle in self.particles:
+            particle.update()
+
+            if particle.lifetime <= 0:
+                self.particles.remove(particle)
+
+    def draw(self, window):
+        for particle in self.particles:
+            particle.draw(window)
+
 class Bar:
     def __init__(self,bg,max):
         self.__max=max
@@ -20,19 +58,28 @@ class Bar:
     def active(self,num):
         if self.__var_max > 0:
             self.__var_max -= num
+
+    def unactive(self,num):
+        if self.__var_max < self.__max:
+            self.__var_max += num
     
     def full_change(self):
         self.__var_max = self.__max
 
 class Ball:
-    def __init__(self,screen:pygame.Surface,coords:tuple[float,float],radius = 10):
+    def __init__(self,screen:pygame.Surface,coords:tuple[float,float],radius = 10,id:str="Ball"):
         self.__screen = screen
         self.__x,self.__y = coords
         self.__radius = radius
+        self.__id = id
     
     @property
     def coords(self):
         return self.__x,self.__y
+    
+    @property
+    def id(self):
+        return self.__id
     
     @coords.setter
     def coords(self,coords):
@@ -84,6 +131,8 @@ next_bot_CT = 1
 next_bot_count = 7
 spawned_bot = []
 
+particle_system = ParticleSystem()
+
 player = Ball(screen,pygame.Vector2(screen.get_width()/2,screen.get_height()/2),40)
 mouse = Ball(screen,pygame.mouse.get_pos(),15)
 pygame.mouse.set_visible(False)
@@ -108,7 +157,7 @@ while running:
     
     #봇 게이지 
     if next_bot.var_max <= 0:
-        spawned_bot.append(Ball(screen,[random.randint(0,screen.get_width()),random.randint(0,screen.get_height())],25))
+        spawned_bot.append(Ball(screen,[random.randint(0,screen.get_width()),random.randint(0,screen.get_height())],25,random.choice(["Bot","Attack"])))
         next_bot.full_change()
         next_bot_CT+=0.5
         point += 5
@@ -119,16 +168,33 @@ while running:
     
     #봇 생성
     for bot in spawned_bot:
-        bot.draw([0,0,255])
-        bot.line(player)
+        if bot.id == "Bot":
+            bot.draw([0,0,255])
+            if player.has_collision_with(bot):
+                player_health.active(10)
+                for _ in range(10):
+                    particle_system.add_particle(bot.coords[0],bot.coords[1],[0,0,255])
+                spawned_bot.remove(bot)
+            elif mouse.has_collision_with(bot):
+                player_health.active(13)
+                for _ in range(10):
+                    particle_system.add_particle(bot.coords[0],bot.coords[1],[0,0,255])
+                spawned_bot.remove(bot)
+        elif bot.id == "Attack":
+            bot.draw([0,255,0])
+            if player.has_collision_with(bot):
+                player_health.unactive(10)
+                for _ in range(10):
+                    particle_system.add_particle(bot.coords[0],bot.coords[1],[0,255,0])
+                spawned_bot.remove(bot)
+            elif mouse.has_collision_with(bot):
+                player_health.unactive(13)
+                for _ in range(10):
+                    particle_system.add_particle(bot.coords[0],bot.coords[1],[0,255,0])
+                spawned_bot.remove(bot)
+        # bot.line(player)
         bot.move_to_player(player,distance)
-        if player.has_collision_with(bot):
-            player_health.active(10)
-            spawned_bot.remove(bot)
-        elif mouse.has_collision_with(bot):
-            player_health.active(13)
-            spawned_bot.remove(bot)
-    
+        
     if distance < 300:
         player.move(dt,distance*1.2,keys=pygame.key.get_pressed())
     else:
@@ -148,12 +214,16 @@ while running:
     dt = clock.tick(60) / 1000
     next_bot.active(next_bot_CT)
     
+    particle_system.update()
+
     #화면 표시시
     player.draw([255,distance_color,0])
     mouse.draw([255,distance_color,0])
     player_health.place(player.coords,0,60)
     next_bot.place((screen.get_width()/2,0),0,0)
     screen.blit(myFont.render(f"POINT : {point}",True,[0,0,0]),[0,0])
+    
+    particle_system.draw(screen)
     pygame.display.flip()
     
 
