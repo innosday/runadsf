@@ -159,7 +159,7 @@ while running:
     if next_bot.var_max <= 0:
         spawned_bot.append(Ball(screen,[random.randint(0,screen.get_width()),random.randint(0,screen.get_height())],25,random.choice(["Bot","Attack"])))
         next_bot.full_change()
-        next_bot_CT+=0.5
+        next_bot_CT = 5 if next_bot_CT > 5 else next_bot_CT + 0.5
         point += 5
         
         next_bot_count = 20 if next_bot_count > 20 else next_bot_count + 1
@@ -204,10 +204,11 @@ while running:
         player_health.active(0.5)
     
     if player_health.var_max <= 0:
-        print("fsd")
-        # pygame.display.flip()
-        # pygame.time.delay(60000)
-        # running = False
+        # print("fsd")
+        screen.blit(myFont.render(f"POINT : {point}",True,[0,0,0]),[screen.get_width()/2,screen.get_height()/2])
+        pygame.display.flip()
+        pygame.time.delay(2500)
+        running = False
         # pygame.quit()
         
 
